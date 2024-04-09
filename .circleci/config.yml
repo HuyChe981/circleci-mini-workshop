@@ -20,16 +20,40 @@ jobs:
             ruby .circleci/generate_config.rb
       - continuation/continue:
           configuration_path: .circleci/config-generated.yml
-  build1:
-    docker: 
+  rubocop:
+    docker:
       - image: cimg/ruby:2.7.4
+    resource_class: small
     steps:
       - checkout
+      - restore_cache:
+          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
       - run: bundle install
+      - save_cache:
+          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+      - run: bundle exec rubocop
+  rspec:
+    docker: 
+      - image: cimg/ruby:2.7.4
+    resource_class: small
+    steps:
+      - checkout
+      - restore_cache:
+          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+      - run: bundle install
+      - save_cache:
+          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
       - run: bundle exec rspec
 
 
 workflows:
   build:
     jobs:
-      - build1
+      - rubocop
+      - rspec:
+          requires:
+            - rubocop
