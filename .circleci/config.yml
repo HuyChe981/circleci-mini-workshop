@@ -6,12 +6,15 @@ setup: false
 
 orbs:
   continuation: circleci/continuation@0.1.2
+  path-filtering: circleci/path-filtering@0.1.1
+
 
 executors:
   myex:
     docker:
       - image: cimg/ruby:2.7.4
     resource_class: small
+
 
 commands:
   setup:
@@ -25,12 +28,16 @@ commands:
           paths:
             - vendor/bundle
 
+
 jobs:
+
+
   rubocop:
     executor: myex
     steps:
       - setup
       - run: bundle exec rubocop
+
   rspec:
     executor: myex
     steps:
@@ -43,7 +50,13 @@ jobs:
 workflows:
   build:
     jobs:
+      - path-filtering/filter:
+          name: check-changed-path
+          mapping: |
+            *.js nodejs-changed true
+            *.rb ruby-changed true
       - rubocop
       - rspec:
+          when: << pipeline.parameters.ruby-changed >>
           requires:
             - rubocop
