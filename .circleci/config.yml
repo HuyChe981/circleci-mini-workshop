@@ -7,46 +7,34 @@ setup: false
 orbs:
   continuation: circleci/continuation@0.1.2
 
+executors:
+  myex:
+    docker:
+      - image: cimg/ruby:2.7.4
+    resource_class: small
+
+commands:
+  setup:
+    steps:
+      - checkout
+      - restore_cache:
+          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+      - run: bundle install
+      - save_cache:
+          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
 
 jobs:
-  setup:
-    docker:
-      - image: cimg/ruby:2.7.4
-    steps:
-      - checkout
-      - run:
-          name: Generate config
-          command: |
-            ruby .circleci/generate_config.rb
-      - continuation/continue:
-          configuration_path: .circleci/config-generated.yml
   rubocop:
-    docker:
-      - image: cimg/ruby:2.7.4
-    resource_class: small
+    executor: myex
     steps:
-      - checkout
-      - restore_cache:
-          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-      - run: bundle install
-      - save_cache:
-          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-          paths:
-            - vendor/bundle
+      - setup
       - run: bundle exec rubocop
   rspec:
-    docker: 
-      - image: cimg/ruby:2.7.4
-    resource_class: small
+    executor: myex
     steps:
-      - checkout
-      - restore_cache:
-          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-      - run: bundle install
-      - save_cache:
-          key: gem-cache-v1-{{ arch }}-{{ .Branch }}-{{ checksum "Gemfile.lock" }}
-          paths:
-            - vendor/bundle
+      - setup
       - run: bundle exec rspec
 
 
